@@ -86,6 +86,8 @@ namespace ASCOM.Sony
         const int WM_LBUTTONUP = 0x202;
         #endregion
 
+        short typicalSleepTime = 200;
+
         const string MinISO = "AUTO";
         const string MaxISO = "25600";
 
@@ -94,6 +96,7 @@ namespace ASCOM.Sony
 
         private IntPtr _shutterButtonHandle;
         private IntPtr _isoLabelHandle;
+        private IntPtr _cameraModeHandle;
         private IntPtr _isoIncreaseButtonHandle;
         private IntPtr _isoDecreaseButtonHandle;
         private IntPtr _shutterSpeedLabelHandle;
@@ -190,11 +193,11 @@ namespace ASCOM.Sony
             public int FileFormatButton;
             public int IsoDecreaseButton;
             public int IsoIncreaseButton;
-            public int ShutterSpeedDecrease;
+            public int ShutterSpeedDecreaseButton;
             public int ShutterSpeedIncreaseButton;
             public int IsoLabel;
             public int ShutterSpeedLabel;
-
+            public int CameraModeHandle;
             public static ImagingEdgeControls v1_4_00 = new ImagingEdgeControls
             {
                 ShutterButton = 0x000003E9,
@@ -202,10 +205,11 @@ namespace ASCOM.Sony
                 FileFormatButton = 0x00000522,
                 IsoDecreaseButton = 0x0000045F,
                 IsoIncreaseButton = 0x0000045E,
-                ShutterSpeedDecrease = 0x0000045B,
+                ShutterSpeedDecreaseButton = 0x0000045B,
                 ShutterSpeedIncreaseButton = 0x0000045A,
                 IsoLabel = 0x00000455,
-                ShutterSpeedLabel = 0x00000453
+                ShutterSpeedLabel = 0x00000453,
+                CameraModeHandle = 0x00000452
             };
         }
         [DllImport("user32.dll")]
@@ -213,15 +217,14 @@ namespace ASCOM.Sony
 
         [DllImport("user32.dll")]
         static extern  int GetDlgCtrlID(IntPtr hWnd);
-        private static IntPtr GetHandle(TreeNode<IntPtr> root, int controlId)
+        private static IntPtr GetHandle(TreeNode<IntPtr> root,string controlName, int controlId)
         {
-
             foreach (var item in root.Flatten())
             {
                 var ctrlId = GetDlgCtrlID(item);
                 if (ctrlId == controlId) return item;
             }
-            return IntPtr.Zero;
+            throw new Exception($"Unable to locate Imaging Edge control '{controlName}'");
         }
 
         public void Connect()
@@ -245,134 +248,26 @@ namespace ASCOM.Sony
                 }
                 
                 //populate important UI elements window handlersv
-                try
-                {
-                    _shutterButtonHandle = GetHandle(_hWindowTree, imagingEdgeControls.ShutterButton);// _hWindowTree.Children[3].Children[0].Children[0].Value;
-                    if (_shutterButtonHandle == IntPtr.Zero)
-                    {
-                        throw new Exception("Shutter Button handle not found.");
-                    }
-                }
-                catch (Exception e)
-                {
-                    throw new Exception("Unable to locate shutter button in Imaging Edge Remote app main window",e);
-                }
-
-                try
-                {
-                    _shutterSpeedLabelHandle = GetHandle(_hWindowTree, imagingEdgeControls.ShutterSpeedLabel);//_hWindowTree.Children[3].Children[2].Children[7].Value;
-                    if (_shutterSpeedLabelHandle == IntPtr.Zero)
-                    {
-                        throw new Exception("Shutter speed label handle not found");
-                    }
-                }
-                catch (Exception e)
-                {
-                    throw new Exception("Unable to locate current shutter speed label in Imaging Edge Remote app main window",e);
-                }
-
-                try
-                {
-                    _isoLabelHandle = GetHandle(_hWindowTree, imagingEdgeControls.IsoLabel);//_hWindowTree.Children[3].Children[2].Children[9].Value;
-                    if (_isoLabelHandle == IntPtr.Zero)
-                    {
-                        throw new Exception("Current ISO label handle not found");
-                    }
-                }
-                catch (Exception e)
-                {
-                    throw new Exception("Unable to locate current ISO label in Imaging Edge Remote app main window", e);
-                }
-
-                try
-                {
-                    _shutterSpeedIncreaseButtonHandle = GetHandle(_hWindowTree, imagingEdgeControls.ShutterSpeedIncreaseButton);//_hWindowTree.Children[3].Children[2].Children[14].Value;
-                    if (_shutterSpeedIncreaseButtonHandle == IntPtr.Zero)
-                    {
-                        throw new Exception("Increase shutter speed button handle not found");
-                    }
-                }
-                catch (Exception e)
-                {
-                    throw new Exception("Unable to locate increase shutter speed button in Imaging Edge Remote app main window",e);
-                }
-
-                try
-                {
-                    _shutterSpeedDecreaseButtonHandle = GetHandle(_hWindowTree, imagingEdgeControls.ShutterSpeedDecrease);//GetHandle(_hWindowTree, imagingEdgeControls.ShutterButton);//_hWindowTree.Children[3].Children[2].Children[15].Value;
-                    if (_shutterSpeedDecreaseButtonHandle == IntPtr.Zero)
-                    {
-                        throw new Exception("Decrease shutter speed button handle not found");
-                    }
-                }
-                catch (Exception e)
-                {
-                    throw new Exception("Unable to locate decrease shutter speed button in Imaging Edge Remote app main window",e);
-                }
-
-                try
-                {
-                    _isoIncreaseButtonHandle = GetHandle(_hWindowTree, imagingEdgeControls.IsoIncreaseButton);//_hWindowTree.Children[3].Children[2].Children[18].Value;
-                    if (_isoIncreaseButtonHandle == IntPtr.Zero)
-                    {
-                        throw new Exception("Increase ISO button handle not found");
-                    }
-                }
-                catch (Exception e)
-                {
-                    throw new Exception("Unable to locate increase ISO button in Imaging Edge Remote app main window", e);
-                }
-
-                try
-                {
-                    _isoDecreaseButtonHandle = GetHandle(_hWindowTree, imagingEdgeControls.IsoDecreaseButton);//GetHandle(_hWindowTree, imagingEdgeControls.ShutterButton);//_hWindowTree.Children[3].Children[2].Children[19].Value;
-                    if (_isoIncreaseButtonHandle == IntPtr.Zero)
-                    {
-                        throw new Exception("Decrease ISO button handle not found");
-                    }
-                }
-                catch (Exception e)
-                {
-                    throw new Exception("Unable to locate decrease ISO button in Imaging Edge Remote app main window", e);
-                }
-
-                try
-                {
-                    _fileFormatButtonHandle = GetHandle(_hWindowTree, imagingEdgeControls.FileFormatButton);//_hWindowTree.Children[3].Children[3].Children[0].Value;
-                    if (_fileFormatButtonHandle == IntPtr.Zero)
-                    {
-                        throw new Exception("File format button handle not found");
-                    }
-                }
-                catch (Exception e)
-                {
-                    throw new Exception("Unable to locate file format button in Imaging Edge Remote app main window");
-                }
-
+                _shutterButtonHandle = GetHandle(_hWindowTree, "ShutterButton", imagingEdgeControls.ShutterButton);
+                _shutterSpeedLabelHandle = GetHandle(_hWindowTree, "ShutterSpeedLabel", imagingEdgeControls.ShutterSpeedLabel);
+                _isoLabelHandle = GetHandle(_hWindowTree, "IsoLabel", imagingEdgeControls.IsoLabel);
+                _shutterSpeedIncreaseButtonHandle = GetHandle(_hWindowTree, "ShutterSpeedIncreaseButton", imagingEdgeControls.ShutterSpeedIncreaseButton);
+                _shutterSpeedDecreaseButtonHandle = GetHandle(_hWindowTree, "ShutterSpeedDecrease", imagingEdgeControls.ShutterSpeedDecreaseButton);
+                _isoIncreaseButtonHandle = GetHandle(_hWindowTree, "IsoIncreaseButton", imagingEdgeControls.IsoIncreaseButton);
+                _isoDecreaseButtonHandle = GetHandle(_hWindowTree, "IsoDecreaseButton", imagingEdgeControls.IsoDecreaseButton);
+                _fileFormatButtonHandle = GetHandle(_hWindowTree, "FileFormatButton", imagingEdgeControls.FileFormatButton);
+                _folderComboboxHandle = GetHandle(_hWindowTree, "FolderCombobox", imagingEdgeControls.FolderCombobox);
+                _cameraModeHandle = GetHandle(_hWindowTree, "FolderCombobox", imagingEdgeControls.CameraModeHandle);
                 string monitorFolderPath;
+                monitorFolderPath = GetCurrentSaveFolder();
 
-                try
+                if (string.IsNullOrEmpty(monitorFolderPath))
                 {
-                    _folderComboboxHandle = GetHandle(_hWindowTree, imagingEdgeControls.FolderCombobox);// _hWindowTree.Children[3].Children[6].Children[9].Value;
-                    if (_folderComboboxHandle == IntPtr.Zero)
-                    {
-                        throw new Exception("Save folder combobox handle not found");
-                    }
-
-                    monitorFolderPath = GetCurrentSaveFolder();
-                    
-                    if (string.IsNullOrEmpty(monitorFolderPath))
-                    {
-                        throw new Exception("Unable to determine path for save folder. Make sure save folder path is selected in Imaging Edge Remote app");
-                    }
+                    throw new Exception("Unable to determine path for save folder. Make sure save folder path is selected in Imaging Edge Remote app");
                 }
-                catch (Exception e)
-                {
-                    throw  new Exception("Unable to locate save folder combobox in Imaging Edge Remote app main window",e);
-                }
-
+                               
                 //create save folder if not exists
-                if (Directory.Exists(monitorFolderPath) == false)
+                if (!Directory.Exists(monitorFolderPath))
                 {
                     Directory.CreateDirectory(monitorFolderPath);
                 }
@@ -450,11 +345,11 @@ namespace ASCOM.Sony
                     {
                         DecreaseISO();
                     }
-                    Thread.Sleep(sleepTime);
+                    Thread.Sleep(typicalSleepTime);
                 }
             }
         }
-        short sleepTime = 200;
+
         private void SyncSaveFolder()
         {
             //it is possible that user changed save folder in remote app - this method ensure that we looking for right folder
@@ -507,7 +402,7 @@ namespace ASCOM.Sony
                 {
                     DecreaseShutterSpeed();
                 }
-                Thread.Sleep(sleepTime);
+                Thread.Sleep(typicalSleepTime);
             }
         }
 
@@ -707,7 +602,7 @@ namespace ASCOM.Sony
             PostMessage(_shutterSpeedDecreaseButtonHandle, WM_LBUTTONUP, IntPtr.Zero, IntPtr.Zero);
 
             //TODO: properly wait sony remote app to update Shutter Speed
-            Thread.Sleep(sleepTime);
+            Thread.Sleep(typicalSleepTime);
         }
 
         private string GetCurrentShutterSpeed()
