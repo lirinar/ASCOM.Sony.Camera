@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 
 namespace ASCOM.Sony
 {
+
     public class ExposureReadyEventArgs : EventArgs
     {
         public Array ImageArray { get; private set; }
@@ -179,6 +181,49 @@ namespace ASCOM.Sony
         public event EventHandler<ExposureAbortedEventArgs> ExposureAborted;
         public event EventHandler<ExposureStoppedEventArgs> ExposureStopped;
 
+        private readonly ImagingEdgeControls imagingEdgeControls = ImagingEdgeControls.v1_4_00;
+
+        private class ImagingEdgeControls
+        {
+            public int ShutterButton;
+            public int FolderCombobox;
+            public int FileFormatButton;
+            public int IsoDecreaseButton;
+            public int IsoIncreaseButton;
+            public int ShutterSpeedDecrease;
+            public int ShutterSpeedIncreaseButton;
+            public int IsoLabel;
+            public int ShutterSpeedLabel;
+
+            public static ImagingEdgeControls v1_4_00 = new ImagingEdgeControls
+            {
+                ShutterButton = 0x000003E9,
+                FolderCombobox = 0x0000057A,
+                FileFormatButton = 0x00000522,
+                IsoDecreaseButton = 0x0000045F,
+                IsoIncreaseButton = 0x0000045E,
+                ShutterSpeedDecrease = 0x0000045B,
+                ShutterSpeedIncreaseButton = 0x0000045A,
+                IsoLabel = 0x00000455,
+                ShutterSpeedLabel = 0x00000453
+            };
+        }
+        [DllImport("user32.dll")]
+        static extern IntPtr GetDlgItem(IntPtr hDlg, int nIDDlgItem);
+
+        [DllImport("user32.dll")]
+        static extern  int GetDlgCtrlID(IntPtr hWnd);
+        private static IntPtr GetHandle(TreeNode<IntPtr> root, int controlId)
+        {
+
+            foreach (var item in root.Flatten())
+            {
+                var ctrlId = GetDlgCtrlID(item);
+                if (ctrlId == controlId) return item;
+            }
+            return IntPtr.Zero;
+        }
+
         public void Connect()
         {
             try
@@ -202,7 +247,7 @@ namespace ASCOM.Sony
                 //populate important UI elements window handlersv
                 try
                 {
-                    _shutterButtonHandle = _hWindowTree.Children[3].Children[0].Children[0].Value;
+                    _shutterButtonHandle = GetHandle(_hWindowTree, imagingEdgeControls.ShutterButton);// _hWindowTree.Children[3].Children[0].Children[0].Value;
                     if (_shutterButtonHandle == IntPtr.Zero)
                     {
                         throw new Exception("Shutter Button handle not found.");
@@ -215,7 +260,7 @@ namespace ASCOM.Sony
 
                 try
                 {
-                    _shutterSpeedLabelHandle = _hWindowTree.Children[3].Children[2].Children[7].Value;
+                    _shutterSpeedLabelHandle = GetHandle(_hWindowTree, imagingEdgeControls.ShutterSpeedLabel);//_hWindowTree.Children[3].Children[2].Children[7].Value;
                     if (_shutterSpeedLabelHandle == IntPtr.Zero)
                     {
                         throw new Exception("Shutter speed label handle not found");
@@ -228,7 +273,7 @@ namespace ASCOM.Sony
 
                 try
                 {
-                    _isoLabelHandle = _hWindowTree.Children[3].Children[2].Children[9].Value;
+                    _isoLabelHandle = GetHandle(_hWindowTree, imagingEdgeControls.IsoLabel);//_hWindowTree.Children[3].Children[2].Children[9].Value;
                     if (_isoLabelHandle == IntPtr.Zero)
                     {
                         throw new Exception("Current ISO label handle not found");
@@ -241,7 +286,7 @@ namespace ASCOM.Sony
 
                 try
                 {
-                    _shutterSpeedIncreaseButtonHandle = _hWindowTree.Children[3].Children[2].Children[14].Value;
+                    _shutterSpeedIncreaseButtonHandle = GetHandle(_hWindowTree, imagingEdgeControls.ShutterSpeedIncreaseButton);//_hWindowTree.Children[3].Children[2].Children[14].Value;
                     if (_shutterSpeedIncreaseButtonHandle == IntPtr.Zero)
                     {
                         throw new Exception("Increase shutter speed button handle not found");
@@ -254,7 +299,7 @@ namespace ASCOM.Sony
 
                 try
                 {
-                    _shutterSpeedDecreaseButtonHandle = _hWindowTree.Children[3].Children[2].Children[15].Value;
+                    _shutterSpeedDecreaseButtonHandle = GetHandle(_hWindowTree, imagingEdgeControls.ShutterSpeedDecrease);//GetHandle(_hWindowTree, imagingEdgeControls.ShutterButton);//_hWindowTree.Children[3].Children[2].Children[15].Value;
                     if (_shutterSpeedDecreaseButtonHandle == IntPtr.Zero)
                     {
                         throw new Exception("Decrease shutter speed button handle not found");
@@ -267,7 +312,7 @@ namespace ASCOM.Sony
 
                 try
                 {
-                    _isoIncreaseButtonHandle = _hWindowTree.Children[3].Children[2].Children[18].Value;
+                    _isoIncreaseButtonHandle = GetHandle(_hWindowTree, imagingEdgeControls.IsoIncreaseButton);//_hWindowTree.Children[3].Children[2].Children[18].Value;
                     if (_isoIncreaseButtonHandle == IntPtr.Zero)
                     {
                         throw new Exception("Increase ISO button handle not found");
@@ -280,7 +325,7 @@ namespace ASCOM.Sony
 
                 try
                 {
-                    _isoDecreaseButtonHandle = _hWindowTree.Children[3].Children[2].Children[19].Value;
+                    _isoDecreaseButtonHandle = GetHandle(_hWindowTree, imagingEdgeControls.IsoDecreaseButton);//GetHandle(_hWindowTree, imagingEdgeControls.ShutterButton);//_hWindowTree.Children[3].Children[2].Children[19].Value;
                     if (_isoIncreaseButtonHandle == IntPtr.Zero)
                     {
                         throw new Exception("Decrease ISO button handle not found");
@@ -293,7 +338,7 @@ namespace ASCOM.Sony
 
                 try
                 {
-                    _fileFormatButtonHandle = _hWindowTree.Children[3].Children[3].Children[0].Value;
+                    _fileFormatButtonHandle = GetHandle(_hWindowTree, imagingEdgeControls.FileFormatButton);//_hWindowTree.Children[3].Children[3].Children[0].Value;
                     if (_fileFormatButtonHandle == IntPtr.Zero)
                     {
                         throw new Exception("File format button handle not found");
@@ -308,7 +353,7 @@ namespace ASCOM.Sony
 
                 try
                 {
-                    _folderComboboxHandle = _hWindowTree.Children[3].Children[6].Children[9].Value;
+                    _folderComboboxHandle = GetHandle(_hWindowTree, imagingEdgeControls.FolderCombobox);// _hWindowTree.Children[3].Children[6].Children[9].Value;
                     if (_folderComboboxHandle == IntPtr.Zero)
                     {
                         throw new Exception("Save folder combobox handle not found");
@@ -405,11 +450,11 @@ namespace ASCOM.Sony
                     {
                         DecreaseISO();
                     }
-                    Thread.Sleep(1000);
+                    Thread.Sleep(sleepTime);
                 }
             }
         }
-
+        short sleepTime = 200;
         private void SyncSaveFolder()
         {
             //it is possible that user changed save folder in remote app - this method ensure that we looking for right folder
@@ -433,7 +478,6 @@ namespace ASCOM.Sony
             {
                 shutterSpeed = "BULB";
             }
-
             bool increase = true;
             if (shutterSpeed != "BULB")
             {
@@ -463,7 +507,7 @@ namespace ASCOM.Sony
                 {
                     DecreaseShutterSpeed();
                 }
-                Thread.Sleep(1000);
+                Thread.Sleep(sleepTime);
             }
         }
 
@@ -663,7 +707,7 @@ namespace ASCOM.Sony
             PostMessage(_shutterSpeedDecreaseButtonHandle, WM_LBUTTONUP, IntPtr.Zero, IntPtr.Zero);
 
             //TODO: properly wait sony remote app to update Shutter Speed
-            Thread.Sleep(1000);
+            Thread.Sleep(sleepTime);
         }
 
         private string GetCurrentShutterSpeed()
