@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 
 namespace ASCOM.Sony
 {
-
     public class ExposureReadyEventArgs : EventArgs
     {
         public Array ImageArray { get; private set; }
@@ -86,7 +85,7 @@ namespace ASCOM.Sony
         const int WM_LBUTTONUP = 0x202;
         #endregion
 
-        short typicalSleepTime = 200;
+        //short typicalSleepTime = 200;
 
         const string MinISO = "AUTO";
         const string MaxISO = "25600";
@@ -345,7 +344,7 @@ namespace ASCOM.Sony
                     {
                         DecreaseISO();
                     }
-                    Thread.Sleep(typicalSleepTime);
+                    //Thread.Sleep(typicalSleepTime);
                 }
             }
         }
@@ -402,7 +401,7 @@ namespace ASCOM.Sony
                 {
                     DecreaseShutterSpeed();
                 }
-                Thread.Sleep(typicalSleepTime);
+                //Thread.Sleep(typicalSleepTime);
             }
         }
 
@@ -527,14 +526,24 @@ namespace ASCOM.Sony
             return GetWindowText(_isoLabelHandle);
         }
 
-        private void IncreaseISO()
+        private string GetCameraMode()
         {
             if (IsConnected == false)
             {
                 throw new InvalidOperationException("Camera not connected.");
             }
 
-            if (GetCurrentISO() == MaxISO)
+            return GetWindowText(_cameraModeHandle);
+        }
+
+        private void IncreaseISO()
+        {
+            if (IsConnected == false)
+            {
+                throw new InvalidOperationException("Camera not connected.");
+            }
+            string currentIso = GetCurrentISO();
+            if (currentIso == MaxISO)
             {
                 return;
             }
@@ -543,7 +552,7 @@ namespace ASCOM.Sony
             PostMessage(_isoIncreaseButtonHandle, WM_LBUTTONUP, IntPtr.Zero, IntPtr.Zero);
 
             //TODO: properly wait sony remote app to update ISO
-            Thread.Sleep(1000);
+            WaitForLabelValueChange(_isoLabelHandle, currentIso, typicalWaitTimeout);
 
         }
 
@@ -553,8 +562,8 @@ namespace ASCOM.Sony
             {
                 throw new InvalidOperationException("Camera not connected.");
             }
-
-            if (GetCurrentISO() == MinISO)
+            string currentIso = GetCurrentISO();
+            if (currentIso == MinISO)
             {
                 return;
             }
@@ -562,8 +571,7 @@ namespace ASCOM.Sony
             PostMessage(_isoDecreaseButtonHandle, WM_LBUTTONDOWN, IntPtr.Zero, IntPtr.Zero);
             PostMessage(_isoDecreaseButtonHandle, WM_LBUTTONUP, IntPtr.Zero, IntPtr.Zero);
 
-            //TODO: properly wait sony remote app to update ISO
-            Thread.Sleep(1000);
+            WaitForLabelValueChange(_isoLabelHandle, currentIso, typicalWaitTimeout);
         }
 
         private void IncreaseShutterSpeed()
@@ -572,8 +580,8 @@ namespace ASCOM.Sony
             {
                 throw new InvalidOperationException("Camera not connected.");
             }
-
-            if (GetCurrentShutterSpeed() == MaxShutterSpeed)
+            string currentShutterSpeed = GetCurrentShutterSpeed();
+            if (currentShutterSpeed == MaxShutterSpeed)
             {
                 return;
             }
@@ -581,9 +589,9 @@ namespace ASCOM.Sony
             PostMessage(_shutterSpeedIncreaseButtonHandle, WM_LBUTTONDOWN, IntPtr.Zero, IntPtr.Zero);
             PostMessage(_shutterSpeedIncreaseButtonHandle, WM_LBUTTONUP, IntPtr.Zero, IntPtr.Zero);
 
-
+            WaitForLabelValueChange(_shutterSpeedLabelHandle, currentShutterSpeed, typicalWaitTimeout);
             //TODO: properly wait sony remote app to update Shutter Speed
-            Thread.Sleep(1000);
+            //Thread.Sleep(1000);
         }
 
         private void DecreaseShutterSpeed()
@@ -593,7 +601,8 @@ namespace ASCOM.Sony
                 throw new InvalidOperationException("Camera not connected.");
             }
 
-            if (GetCurrentShutterSpeed() == MinShutterSpeed)
+            string currentShutterSpeed = GetCurrentShutterSpeed();
+            if (currentShutterSpeed == MinShutterSpeed)
             {
                 return;
             }
@@ -601,10 +610,11 @@ namespace ASCOM.Sony
             PostMessage(_shutterSpeedDecreaseButtonHandle, WM_LBUTTONDOWN, IntPtr.Zero, IntPtr.Zero);
             PostMessage(_shutterSpeedDecreaseButtonHandle, WM_LBUTTONUP, IntPtr.Zero, IntPtr.Zero);
 
+            WaitForLabelValueChange(_shutterSpeedLabelHandle, currentShutterSpeed, typicalWaitTimeout);
             //TODO: properly wait sony remote app to update Shutter Speed
-            Thread.Sleep(typicalSleepTime);
+            //Thread.Sleep(typicalSleepTime);
         }
-
+        TimeSpan typicalWaitTimeout = TimeSpan.FromSeconds(2);
         private string GetCurrentShutterSpeed()
         {
             if (IsConnected == false)
@@ -683,6 +693,17 @@ namespace ASCOM.Sony
             return true;
         }
 
+        private static bool WaitForLabelValueChange(IntPtr hWnd, string oldValue, TimeSpan timeout)
+        {
+            var start = DateTime.Now;
+            while ((DateTime.Now - start) < timeout)
+            {
+                if (GetWindowText(hWnd) != oldValue)
+                    return true;
+                Thread.Sleep(50);
+            }
+            return false;
+        }
         private static string GetWindowText(IntPtr hWnd)
         {
             StringBuilder sb = new StringBuilder();
